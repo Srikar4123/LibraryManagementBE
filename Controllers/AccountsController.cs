@@ -1,9 +1,11 @@
-﻿using LibraryManagementBE.Model;
+﻿using LibraryManagementBE.Data;
+using LibraryManagementBE.Helpers;
+using LibraryManagementBE.Model;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
-using LibraryManagementBE.Data;
+using System.ComponentModel.DataAnnotations;
 
 namespace LibraryManagementBE.Controllers
 {
@@ -12,6 +14,8 @@ namespace LibraryManagementBE.Controllers
     public class AccountsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly PasswordHasher<Account> _passwordHasher = new();
+        private static readonly string[] AllowedDomains = { "@admin.com", "@admin.in" };
 
         public AccountsController(AppDbContext context)
         {
@@ -39,7 +43,6 @@ namespace LibraryManagementBE.Controllers
         }
 
         // ===== List & filter =====
-        // GET /api/accounts?role=Admin&search=kapya
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? role, [FromQuery] string? search)
         {
@@ -70,17 +73,27 @@ namespace LibraryManagementBE.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] AccountCreateDto dto)
         {
-            if (!ModelState.IsValid) return ValidationProblem(ModelState);
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
 
             // Pre-check duplicates for more friendly error
-            var exists = await _context.Accounts.AnyAsync(a => a.email == dto.email || a.phoneNumber == dto.phoneNumber);
-            if (exists) return Conflict(new { message = "Email or phone number already exists." });
+            var exists = await _context.Accounts
+                .AnyAsync(a => a.email == dto.email || a.phoneNumber == dto.phoneNumber);
+
+            if (exists)
+                return Conflict(new { message = "Email or phone number already exists." });
+
+            // 🔐 Create hasher
+            var hasher = new PasswordHasher<Account>();
 
             var acc = new Account
             {
                 userName = dto.userName,
                 email = dto.email,
-                password = dto.password,     // NOTE: store hashed password in real apps
+
+                // 🔐 Hash password before saving
+                password = hasher.HashPassword(null!, dto.password),
+
                 phoneNumber = dto.phoneNumber,
                 role = dto.role,
                 isActive = true,
@@ -89,6 +102,7 @@ namespace LibraryManagementBE.Controllers
 
             _context.Accounts.Add(acc);
             await _context.SaveChangesAsync();
+
             return CreatedAtAction(nameof(Get), new { id = acc.Id }, acc);
         }
 
@@ -141,5 +155,99 @@ namespace LibraryManagementBE.Controllers
             await _context.SaveChangesAsync();
             return Ok(new { message = "Account deactivated." });
         }
+
+
+        [HttpPost("{id:int}/activate")]
+        public async Task<IActionResult> Activate(int id)
+        {
+            var acc = await _context.Accounts.FindAsync(id);
+            if (acc == null)
+                return NotFound(new { message = $"Account {id} not found." });
+
+            // If already active, you can either return 200 OK or 204 NoContent.
+            // Returning OK with a message is more user-friendly.
+            if (acc.isActive)
+                return Ok(new { message = "Account is already active." });
+
+            acc.isActive = true;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Account activated." });
+        }
+ 
+        [HttpPost("login")]
+
+        public async Task<IActionResult> Login([FromBody] LoginDto dto)
+        {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            if (string.IsNullOrWhiteSpace(dto.email) ||
+
+                !AllowedDomains.Any(d =>
+
+                dto.email.EndsWith(d, StringComparison.OrdinalIgnoreCase)))
+
+            {
+
+            return Unauthorized(new
+
+            {
+
+                message = "Only admin domain email addresses are allowed."
+
+            });
+
+        }
+
+        var acc = await _context.Accounts
+
+            .FirstOrDefaultAsync(a => a.email == dto.email);
+
+        if (acc == null)
+
+            return Unauthorized(new { message = "Invalid email or password" });
+
+        if (!acc.isActive)
+
+            return Unauthorized(new { message = "Account is deactivated" });
+
+        // 🔐 Verify password using PasswordHasher
+
+        var hasher = new PasswordHasher<Account>();
+
+        var result = hasher.VerifyHashedPassword(acc, acc.password, dto.password);
+
+        if (result == PasswordVerificationResult.Failed)
+
+            return Unauthorized(new { message = "Invalid email or password" });
+
+        return Ok(new
+
+        {
+
+            message = "Login successful",
+
+            accountId = acc.Id,
+
+            userName = acc.userName,
+
+            role = acc.role
+
+        });
+
     }
+
+
+}
+
+public class LoginDto
+    {
+        [Required, EmailAddress]
+        public string email { get; set; }
+
+        [Required]
+        public string password { get; set; }
+    }
+
 }
