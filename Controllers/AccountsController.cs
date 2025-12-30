@@ -6,6 +6,11 @@ using Microsoft.AspNetCore.Identity;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+
 
 namespace LibraryManagementBE.Controllers
 {
@@ -174,74 +179,49 @@ namespace LibraryManagementBE.Controllers
 
             return Ok(new { message = "Account activated." });
         }
- 
-        [HttpPost("login")]
 
+        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            if (string.IsNullOrWhiteSpace(dto.email) ||
+            if (!AllowedDomains.Any(d => dto.email.EndsWith(d, StringComparison.OrdinalIgnoreCase)))
+                return Unauthorized(new { message = "Only admin domain email addresses are allowed." });
 
-                !AllowedDomains.Any(d =>
+            var acc = await _context.Accounts.FirstOrDefaultAsync(a => a.email == dto.email);
 
-                dto.email.EndsWith(d, StringComparison.OrdinalIgnoreCase)))
+            if (acc == null || !acc.isActive)
+                return Unauthorized(new { message = "Invalid credentials" });
 
+            var hasher = new PasswordHasher<Account>();
+            var result = hasher.VerifyHashedPassword(acc, acc.password, dto.password);
+
+            if (result == PasswordVerificationResult.Failed)
+                return Unauthorized(new { message = "Invalid credentials" });
+
+            var claims = new[]
             {
+        new Claim("id", acc.Id.ToString()),
+        new Claim(ClaimTypes.Role, acc.role.ToString())
+    };
 
-            return Unauthorized(new
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("MY_SUPER_SECRET_KEY_12345"));
 
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(8),
+                signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
+
+            return Ok(new
             {
-
-                message = "Only admin domain email addresses are allowed."
-
+                token = new JwtSecurityTokenHandler().WriteToken(token),
+                user = new { acc.Id, acc.userName, acc.role }
             });
-
         }
-
-        var acc = await _context.Accounts
-
-            .FirstOrDefaultAsync(a => a.email == dto.email);
-
-        if (acc == null)
-
-            return Unauthorized(new { message = "Invalid email or password" });
-
-        if (!acc.isActive)
-
-            return Unauthorized(new { message = "Account is deactivated" });
-
-        // 🔐 Verify password using PasswordHasher
-
-        var hasher = new PasswordHasher<Account>();
-
-        var result = hasher.VerifyHashedPassword(acc, acc.password, dto.password);
-
-        if (result == PasswordVerificationResult.Failed)
-
-            return Unauthorized(new { message = "Invalid email or password" });
-
-        return Ok(new
-
-        {
-
-            message = "Login successful",
-
-            accountId = acc.Id,
-
-            userName = acc.userName,
-
-            role = acc.role
-
-        });
-
     }
 
-
-}
-
-public class LoginDto
+        public class LoginDto
     {
         [Required, EmailAddress]
         public string email { get; set; }

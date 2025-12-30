@@ -3,6 +3,7 @@ using LibraryManagementBE.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 
 namespace MiniProject.Controllers
 {
@@ -66,9 +67,14 @@ namespace MiniProject.Controllers
             await _accounts.Accounts.AnyAsync(a => a.Id == accountId && a.role == AccountRole.User);
 
         // ADMIN: Issue
+        [Authorize(Roles = "Admin")]
         [HttpPost("admin/issue")]
         public async Task<IActionResult> AdminIssue([FromBody] AdminIssueDto dto)
+
+
         {
+            //var adminId = int.Parse(User.FindFirst("id")!.Value);
+
             if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
             if (!await IsAdmin(dto.adminId))
