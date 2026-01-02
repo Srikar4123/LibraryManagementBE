@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LibraryManagementBE.Migrations.BooksDb
 {
     [DbContext(typeof(BooksDbContext))]
-    [Migration("20251223155658_BooksMigration")]
-    partial class BooksMigration
+    [Migration("20251231100227_Mig2")]
+    partial class Mig2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -52,6 +52,10 @@ namespace LibraryManagementBE.Migrations.BooksDb
 
                     b.Property<decimal>("price")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("publishedYear")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("title")
                         .IsRequired()

@@ -42,6 +42,7 @@ namespace MiniProject.Controllers
 
         public class ReturnDto
         {
+            public int userId { get; set; }
             [Required] public int loanId { get; set; }
         }
 
@@ -81,6 +82,13 @@ namespace MiniProject.Controllers
             if (book == null) return NotFound(new { message = $"Book {dto.bookId} not found." });
             if (book.availableCopies <= 0) return BadRequest(new { message = "No available copies to issue." });
 
+            bool alreadyHasThisBook = await _fines.Fines.AnyAsync(
+                f => f.UserId == dto.userId && f.BookId == dto.bookId && f.ReturnDate == null
+            );
+
+            if (alreadyHasThisBook)
+                return BadRequest(new { message = "This user already has an active loan for this book." });
+
             var activeCount = await _fines.Fines.CountAsync(f => f.UserId == dto.userId && f.ReturnDate == null);
             if (activeCount >= 2) return BadRequest(new { message = "Borrow limit reached (max 2 active loans)." });
 
@@ -117,6 +125,12 @@ namespace MiniProject.Controllers
             if (book == null) return NotFound(new { message = $"Book {dto.bookId} not found." });
             if (book.availableCopies <= 0) return BadRequest(new { message = "No available copies to borrow." });
 
+            bool alreadyHasThisBook = await _fines.Fines.AnyAsync(
+                f => f.UserId == dto.userId && f.BookId == dto.bookId && f.ReturnDate == null
+            );
+            if (alreadyHasThisBook)
+                return BadRequest(new { message = "You already have an active loan for this book." });
+
             var activeCount = await _fines.Fines.CountAsync(f => f.UserId == dto.userId && f.ReturnDate == null);
             if (activeCount >= 2) return BadRequest(new { message = "Borrow limit reached (max 2 active loans)." });
 
@@ -144,25 +158,41 @@ namespace MiniProject.Controllers
         [HttpPost("return")]
         public async Task<IActionResult> Return([FromBody] ReturnDto dto)
         {
-            if (!ModelState.IsValid) return ValidationProblem(ModelState);
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
 
             var loan = await _fines.Fines.FirstOrDefaultAsync(f => f.Id == dto.loanId);
-            if (loan == null) return NotFound(new { message = $"Loan {dto.loanId} not found." });
-            if (loan.ReturnDate != null) return BadRequest(new { message = "Loan already returned." });
+            if (loan == null)
+                return NotFound(new { message = $"Loan {dto.loanId} not found." });
+
+            if (loan.UserId != dto.userId)
+                return Forbid("You cannot return a book you did not borrow.");
+
+            if (loan.ReturnDate != null)
+                return BadRequest(new { message = "Loan already returned." });
 
             var book = await _books.Books.FindAsync(loan.BookId);
-            if (book == null) return NotFound(new { message = $"Book {loan.BookId} not found." });
+            if (book == null)
+                return NotFound(new { message = $"Book {loan.BookId} not found." });
 
             loan.ReturnDate = DateTime.UtcNow;
             loan.fineAmount = ComputeFine(loan.DueDate, loan.ReturnDate.Value);
-
-            book.availableCopies = Math.Min(book.availableCopies + 1, book.totalCopies);
+            book.availableCopies = Math.Min(
+                book.availableCopies + 1,
+                book.totalCopies
+            );
 
             await _fines.SaveChangesAsync();
             await _books.SaveChangesAsync();
 
-            return Ok(new { message = "Book returned", fineAmount = loan.fineAmount, availableCopies = book.availableCopies });
+            return Ok(new
+            {
+                message = "Book returned",
+                fineAmount = loan.fineAmount,
+                availableCopies = book.availableCopies
+            });
         }
+
 
         // USER: Pay Fine
         [HttpPost("pay")]

@@ -174,72 +174,45 @@ namespace LibraryManagementBE.Controllers
 
             return Ok(new { message = "Account activated." });
         }
- 
-        [HttpPost("login")]
 
+        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            if (string.IsNullOrWhiteSpace(dto.email) ||
+            if (string.IsNullOrWhiteSpace(dto.email) || string.IsNullOrWhiteSpace(dto.password))
+                return Unauthorized(new { message = "Email and password are required" });
 
-                !AllowedDomains.Any(d =>
+            var acc = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.email == dto.email);
 
-                dto.email.EndsWith(d, StringComparison.OrdinalIgnoreCase)))
+            if (acc == null)
+                return Unauthorized(new { message = "Invalid email or password" });
 
+            if (!acc.isActive)
+                return Unauthorized(new { message = "Account is deactivated" });
+
+            // 🔐 Verify password using PasswordHasher
+            var hasher = new PasswordHasher<Account>();
+            var result = hasher.VerifyHashedPassword(acc, acc.password, dto.password);
+
+            if (result == PasswordVerificationResult.Failed)
+                return Unauthorized(new { message = "Invalid email or password" });
+
+            // 🎯 Success — return role info so frontend can route correctly
+            return Ok(new
             {
-
-            return Unauthorized(new
-
-            {
-
-                message = "Only admin domain email addresses are allowed."
-
+                message = "Login successful",
+                id = acc.Id,
+                userName = acc.userName,
+                email = acc.email,
+                phoneNumber = acc.phoneNumber,
+                role = acc.role
             });
-
         }
 
-        var acc = await _context.Accounts
-
-            .FirstOrDefaultAsync(a => a.email == dto.email);
-
-        if (acc == null)
-
-            return Unauthorized(new { message = "Invalid email or password" });
-
-        if (!acc.isActive)
-
-            return Unauthorized(new { message = "Account is deactivated" });
-
-        // 🔐 Verify password using PasswordHasher
-
-        var hasher = new PasswordHasher<Account>();
-
-        var result = hasher.VerifyHashedPassword(acc, acc.password, dto.password);
-
-        if (result == PasswordVerificationResult.Failed)
-
-            return Unauthorized(new { message = "Invalid email or password" });
-
-        return Ok(new
-
-        {
-
-            message = "Login successful",
-
-            accountId = acc.Id,
-
-            userName = acc.userName,
-
-            role = acc.role
-
-        });
-
     }
-
-
-}
 
 public class LoginDto
     {

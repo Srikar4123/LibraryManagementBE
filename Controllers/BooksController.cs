@@ -30,6 +30,7 @@ namespace MiniProject.Controllers
             [Required] public string genre { get; set; }
             [Range(0, int.MaxValue)] public int totalCopies { get; set; }
             [Range(0, int.MaxValue)] public int availableCopies { get; set; }
+            public string publishedYear {  get; set; }
         }
 
         public class AvailabilityAdjustDto
@@ -73,7 +74,8 @@ namespace MiniProject.Controllers
                 price = dto.price,
                 genre = dto.genre,
                 totalCopies = dto.totalCopies,
-                availableCopies = dto.availableCopies
+                availableCopies = dto.availableCopies,
+                publishedYear = dto.publishedYear,
             };
 
             if (book.availableCopies > book.totalCopies)
@@ -101,6 +103,7 @@ namespace MiniProject.Controllers
             book.price = dto.price;
             book.genre = dto.genre;
             book.totalCopies = dto.totalCopies;
+            book.publishedYear = dto.publishedYear;
 
             // clamp availability
             book.availableCopies = Math.Max(0, Math.Min(dto.availableCopies, dto.totalCopies));

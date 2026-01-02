@@ -1,4 +1,6 @@
-﻿namespace LibraryManagementBE.Model
+﻿using Microsoft.Extensions.Primitives;
+
+namespace LibraryManagementBE.Model
 {
     public class Books
     {
@@ -11,5 +13,6 @@
         public string genre { get; set; }
         public int totalCopies { get; set; }
         public int availableCopies { get; set; }
+        public string publishedYear{ get; set; }
     }
 }
