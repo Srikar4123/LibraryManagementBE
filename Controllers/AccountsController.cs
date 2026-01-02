@@ -186,42 +186,40 @@ namespace LibraryManagementBE.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            if (!AllowedDomains.Any(d => dto.email.EndsWith(d, StringComparison.OrdinalIgnoreCase)))
-                return Unauthorized(new { message = "Only admin domain email addresses are allowed." });
+            if (string.IsNullOrWhiteSpace(dto.email) || string.IsNullOrWhiteSpace(dto.password))
+                return Unauthorized(new { message = "Email and password are required" });
 
-            var acc = await _context.Accounts.FirstOrDefaultAsync(a => a.email == dto.email);
+            var acc = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.email == dto.email);
 
-            if (acc == null || !acc.isActive)
-                return Unauthorized(new { message = "Invalid credentials" });
+            if (acc == null)
+                return Unauthorized(new { message = "Invalid email or password" });
 
+            if (!acc.isActive)
+                return Unauthorized(new { message = "Account is deactivated" });
+
+            // 🔐 Verify password using PasswordHasher
             var hasher = new PasswordHasher<Account>();
             var result = hasher.VerifyHashedPassword(acc, acc.password, dto.password);
 
             if (result == PasswordVerificationResult.Failed)
-                return Unauthorized(new { message = "Invalid credentials" });
+                return Unauthorized(new { message = "Invalid email or password" });
 
-            var claims = new[]
-            {
-        new Claim("id", acc.Id.ToString()),
-        new Claim(ClaimTypes.Role, acc.role.ToString())
-    };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("MY_SUPER_SECRET_KEY_12345"));
-
-            var token = new JwtSecurityToken(
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(8),
-                signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
-
+            // 🎯 Success — return role info so frontend can route correctly
             return Ok(new
             {
-                token = new JwtSecurityTokenHandler().WriteToken(token),
-                user = new { acc.Id, acc.userName, acc.role }
+                message = "Login successful",
+                id = acc.Id,
+                userName = acc.userName,
+                email = acc.email,
+                phoneNumber = acc.phoneNumber,
+                role = acc.role
             });
         }
+
     }
 
-        public class LoginDto
+public class LoginDto
     {
         [Required, EmailAddress]
         public string email { get; set; }

@@ -50,6 +50,10 @@ namespace LibraryManagementBE.Migrations.BooksDb
                     b.Property<decimal>("price")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("publishedYear")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("title")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
