@@ -68,7 +68,7 @@ namespace MiniProject.Controllers
             await _accounts.Accounts.AnyAsync(a => a.Id == accountId && a.role == AccountRole.User);
 
         // ADMIN: Issue
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpPost("admin/issue")]
         public async Task<IActionResult> AdminIssue([FromBody] AdminIssueDto dto)
 
