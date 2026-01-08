@@ -27,7 +27,7 @@ namespace LibraryManagementBE.Controllers
             _context = context;
         }
 
-        // ===== DTOs (kept inside controller) =====
+        // Data Transfer Objects (DTOs)
         public class AccountCreateDto
         {
             [Required, MaxLength(150)] public string userName { get; set; }
@@ -47,7 +47,8 @@ namespace LibraryManagementBE.Controllers
             public bool isActive { get; set; } = true;
         }
 
-        // ===== List & filter =====
+        //API Endpoints
+
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? role, [FromQuery] string? search)
         {
@@ -88,7 +89,7 @@ namespace LibraryManagementBE.Controllers
             if (exists)
                 return Conflict(new { message = "Email or phone number already exists." });
 
-            // 🔐 Create hasher
+            // Create hasher
             var hasher = new PasswordHasher<Account>();
 
             var acc = new Account
@@ -96,7 +97,7 @@ namespace LibraryManagementBE.Controllers
                 userName = dto.userName,
                 email = dto.email,
 
-                // 🔐 Hash password before saving
+                // Hash password before saving
                 password = hasher.HashPassword(null!, dto.password),
 
                 phoneNumber = dto.phoneNumber,
@@ -127,7 +128,7 @@ namespace LibraryManagementBE.Controllers
 
             acc.userName = dto.userName;
             acc.email = dto.email;
-            acc.password = dto.password;  // NOTE: hash in real apps
+            acc.password = dto.password;  
             acc.phoneNumber = dto.phoneNumber;
             acc.role = dto.role;
             acc.isActive = dto.isActive;
@@ -148,7 +149,7 @@ namespace LibraryManagementBE.Controllers
             return NoContent();
         }
 
-        // Soft deactivate instead of hard delete (optional)
+        // Soft deactivate instead of hard delete
         // POST /api/accounts/{id}/deactivate
         [HttpPost("{id:int}/deactivate")]
         public async Task<IActionResult> Deactivate(int id)
@@ -198,14 +199,14 @@ namespace LibraryManagementBE.Controllers
             if (!acc.isActive)
                 return Unauthorized(new { message = "Account is deactivated" });
 
-            // 🔐 Verify password using PasswordHasher
+            //  Verify password using PasswordHasher
             var hasher = new PasswordHasher<Account>();
             var result = hasher.VerifyHashedPassword(acc, acc.password, dto.password);
 
             if (result == PasswordVerificationResult.Failed)
                 return Unauthorized(new { message = "Invalid email or password" });
 
-            // 🎯 Success — return role info so frontend can route correctly
+            // Success — return role info so frontend can route correctly
             return Ok(new
             {
                 message = "Login successful",

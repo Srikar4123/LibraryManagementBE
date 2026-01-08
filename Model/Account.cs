@@ -2,6 +2,8 @@
 
 namespace LibraryManagementBE.Model
 {
+    //Unique Identification of the user
+
     public enum AccountRole
     {
         User = 0,
@@ -10,6 +12,8 @@ namespace LibraryManagementBE.Model
 
     public class Account
     {
+        // Properties for the Account Model
+       
         public int Id { get; set; }
 
         [Required, MaxLength(150)]

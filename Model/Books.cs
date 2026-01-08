@@ -4,6 +4,8 @@ namespace LibraryManagementBE.Model
 {
     public class Books
     {
+        // Properties for the Books Model
+
         public int Id { get; set; }
         public string title { get; set; }
         public string description { get; set; }

@@ -19,7 +19,7 @@ namespace MiniProject.Controllers
             _fines = fines;
         }
 
-        // DTOs
+        // Data Transfer Objects (DTOs)
         public class BookDto
         {
             [Required] public string title { get; set; }
@@ -36,11 +36,12 @@ namespace MiniProject.Controllers
         public class AvailabilityAdjustDto
         {
             [Required] public int bookId { get; set; }
-            /// Use -1 to decrement (issue/borrow), +1 to increment (return)
             [Required] public int delta { get; set; }
         }
 
-        // READ with genre filter
+        // API Endpoints
+
+        //GetAll
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? genre)
         {
@@ -59,7 +60,7 @@ namespace MiniProject.Controllers
             return book == null ? NotFound(new { message = $"Book {id} not found." }) : Ok(book);
         }
 
-        // CREATE
+        // Create
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] BookDto dto)
         {
@@ -87,7 +88,7 @@ namespace MiniProject.Controllers
             return CreatedAtAction(nameof(Get), new { id = book.Id }, book);
         }
 
-        // UPDATE
+        // Update
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] BookDto dto)
         {
@@ -104,8 +105,6 @@ namespace MiniProject.Controllers
             book.genre = dto.genre;
             book.totalCopies = dto.totalCopies;
             book.publishedYear = dto.publishedYear;
-
-            // clamp availability
             book.availableCopies = Math.Max(0, Math.Min(dto.availableCopies, dto.totalCopies));
 
             await _books.SaveChangesAsync();
@@ -129,7 +128,7 @@ namespace MiniProject.Controllers
             return NoContent();
         }
 
-        // Availability helpers
+        // Adjusting the Availability
         [HttpPost("availability/adjust")]
         public async Task<IActionResult> AdjustAvailability([FromBody] AvailabilityAdjustDto dto)
         {

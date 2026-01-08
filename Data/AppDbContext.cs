@@ -13,7 +13,8 @@ namespace LibraryManagementBE.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Unique constraints across both users and admins
+            // Unique constraints for both users and admins
+
             modelBuilder.Entity<Account>()
                 .HasIndex(a => a.email)
                 .IsUnique();
@@ -22,7 +23,6 @@ namespace LibraryManagementBE.Data
                 .HasIndex(a => a.phoneNumber)
                 .IsUnique();
 
-            // Helpful indexes
             modelBuilder.Entity<Account>()
                 .HasIndex(a => a.role);
 

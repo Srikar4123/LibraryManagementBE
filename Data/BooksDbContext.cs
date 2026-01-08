@@ -13,6 +13,8 @@ namespace LibraryManagementBE.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // Unique constraints for Books
+
             modelBuilder.Entity<Books>().HasIndex(b => b.genre);
             modelBuilder.Entity<Books>().HasIndex(b => b.title);
 

@@ -23,7 +23,7 @@ namespace MiniProject.Controllers
             _accounts = accounts;
         }
 
-        // DTOs
+        // Data Transfer Objects (DTOs)
         public class AdminIssueDto
         {
             [Required] public int adminId { get; set; }

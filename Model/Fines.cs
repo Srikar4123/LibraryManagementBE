@@ -5,6 +5,7 @@ namespace LibraryManagementBE.Model
 {
     public class Fines
     {
+        // Properties of the Fines Model
 
         public int Id { get; set; }
 
@@ -17,17 +18,16 @@ namespace LibraryManagementBE.Model
 
         public decimal fineAmount { get; set; }
 
-        public bool paymentStatus { get; set; }  // true when fine is paid
+        public bool paymentStatus { get; set; } 
 
         [Required]
-        public DateTime IssueDate { get; set; }  // when issued
+        public DateTime IssueDate { get; set; }  
 
         [Required]
-        public DateTime DueDate { get; set; }    // when it should be returned
+        public DateTime DueDate { get; set; }    
 
-        public DateTime? ReturnDate { get; set; } // actual return date (null = still borrowed)
+        public DateTime? ReturnDate { get; set; } 
 
-        // Navigation
         public Books Book { get; set; }
         public Account UserAccount { get; set; }
     }

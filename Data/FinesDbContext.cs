@@ -13,14 +13,14 @@ namespace LibraryManagementBE.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Indexes to speed up common queries
-            modelBuilder.Entity<Fines>()
-                .HasIndex(f => new { f.UserId, f.ReturnDate }); // active loans per user
+            // Constraints on Fines 
 
             modelBuilder.Entity<Fines>()
-                .HasIndex(f => new { f.BookId, f.ReturnDate }); // active loans per book
+                .HasIndex(f => new { f.UserId, f.ReturnDate }); 
 
-            // Ensure decimal precision
+            modelBuilder.Entity<Fines>()
+                .HasIndex(f => new { f.BookId, f.ReturnDate }); 
+
             modelBuilder.Entity<Fines>()
                 .Property(f => f.fineAmount)
                 .HasColumnType("decimal(18,2)");
